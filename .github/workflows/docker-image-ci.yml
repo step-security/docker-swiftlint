@@ -1,7 +1,6 @@
 name: Docker Image CI
 
 on:
-  create:
   push:
     branches: [main]
     paths:
@@ -13,6 +12,13 @@ on:
       - '.github/actions/*/action.yml'
       - '.github/workflows/*.yml'
       - '*/Dockerfile'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tag to release (format: vX.Y.Z, e.g., v0.63.1)'
+        required: true
+        type: string
+
 
 jobs:
   build_swiftlint:
@@ -24,17 +30,28 @@ jobs:
 
     env:
       CONTAINER_REPOSITORIES: '["step-security/swiftlint", "ghcr.io/step-security/swiftlint"]'
-      SWIFTLINT_REVISION: ${{ github.event_name == 'create' && github.event.ref_type == 'tag' && github.event.ref || '0.62.0' }}
+      SWIFTLINT_REVISION: ${{ inputs.release_tag }}
       TARGET_SWIFT_VERSION: '6.2'
 
     outputs:
-      push: ${{ github.event_name == 'create' && github.event.ref_type == 'tag' && 'true' || 'false' }}
+      push: ${{ github.event_name == 'workflow_dispatch' }}
       repositories: ${{ env.CONTAINER_REPOSITORIES }}
       swift_version: ${{ env.TARGET_SWIFT_VERSION }}
       swiftlint_revision: ${{ env.SWIFTLINT_REVISION }}
 
     steps:
     - uses: actions/checkout@v6
+
+    - name: Validate tag format
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        TAG=${{ github.event.inputs.release_tag }}
+        if ! echo "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+          echo "❌ Invalid tag format: $TAG"
+          echo "Expected format: vX.Y.Z (e.g., v0.63.1)"
+          exit 1
+        fi
+        echo "✅ Valid semver tag: $TAG"
 
     - uses: ./.github/actions/configure-docker-containerd-image-store
 
