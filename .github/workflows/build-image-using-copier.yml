@@ -1,0 +1,83 @@
+name: build image using copier
+
+on:
+  workflow_call:
+    inputs:
+      build-args:
+        required: true
+        type: string
+      image_name:
+        required: true
+        type: string
+      push:
+        required: true
+        type: string
+      tags:
+        required: true
+        type: string
+
+jobs:
+  build_image_using_copier:
+    name: Build ${{ inputs.image_name }} image using copier
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - uses: actions/download-artifact@v6
+      with:
+        name: swiftlint_amd64
+        path: copier
+
+    - uses: actions/download-artifact@v6
+      with:
+        name: swiftlint_arm64
+        path: copier
+
+    - name: Free up disk space
+      run: |
+        echo "Disk space before cleanup:"
+        df -h
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/share/boost
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        docker system prune -af --volumes
+        echo "Disk space after cleanup:"
+        df -h
+
+    - uses: ./.github/actions/install_qemu_user_static_from_debian
+
+    - uses: ./.github/actions/configure-docker-containerd-image-store
+
+    - run: echo "${{ inputs.tags }}"
+
+    # - name: Login to Docker Hub
+    #   uses: step-security/docker-login-action@v3
+    #   with:
+    #     username: ${{ github.actor }}
+    #     password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Login to GitHub Container Registry
+      uses: step-security/docker-login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Docker Buildx
+      uses: step-security/setup-buildx-action@v3
+      with:
+        version: latest
+
+    - name: build image using copier
+      uses: step-security/docker-build-push-action@v6
+      with:
+        build-args: ${{ inputs.build-args }}
+        context: copier
+        platforms: linux/amd64,linux/arm64
+        push: ${{ inputs.push }}
+        tags: ${{ inputs.tags }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
