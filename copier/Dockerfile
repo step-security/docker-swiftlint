@@ -38,6 +38,17 @@ EOT
 ARG TARGETARCH
 ADD swiftlint_linux_${TARGETARCH}.tar.gz /
 
+# Remove unnecessary packages to reduce CVEs
+# Mark runtime dependencies as manually installed so autoremove won't touch them
+RUN apt-mark manual libcurl4 libxml2 && \
+    apt-get remove -y \
+    linux-libc-dev \
+    binutils \
+    patch \
+    2>/dev/null || true && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
 # Print Installed SwiftLint Version
 RUN ["swiftlint", "version"]
 RUN echo "_ = 0" | exec swiftlint --use-stdin
