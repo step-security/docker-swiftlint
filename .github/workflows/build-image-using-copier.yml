@@ -20,6 +20,9 @@ jobs:
   build_image_using_copier:
     name: Build ${{ inputs.image_name }} image using copier
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
     - uses: actions/checkout@v6
