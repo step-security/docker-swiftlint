@@ -43,7 +43,12 @@ jobs:
       swiftlint_revision: ${{ env.SWIFTLINT_REVISION }}
 
     steps:
-    - uses: actions/checkout@v6
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
     - name: Validate tag format
       if: github.event_name == 'workflow_dispatch'
@@ -58,12 +63,12 @@ jobs:
 
     - uses: ./.github/actions/configure-docker-containerd-image-store
 
-    - uses: step-security/setup-buildx-action@v3
+    - uses: step-security/setup-buildx-action@8c8aef2d414c0b66518fee2b7084e0986f82d7ac # v3.11.1
       with:
         version: latest
 
     - name: build ${{ matrix.target_arch }} architecture
-      uses: step-security/docker-build-push-action@v6
+      uses: step-security/docker-build-push-action@a8c3d08b23f8be6aeed43eb1a14ce6fe51284438 # v6.18.0
       with:
         build-args: |
           BUILDER_IMAGE=swift:6.2-jammy
@@ -84,7 +89,7 @@ jobs:
         > copier/swiftlint_linux_${{ matrix.target_arch }}.tar.gz
 
     - name: upload ${{ matrix.target_arch }} artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: swiftlint_${{ matrix.target_arch }}
         path: copier/swiftlint_linux_${{ matrix.target_arch }}.tar.gz
@@ -96,7 +101,12 @@ jobs:
     outputs:
       tags: ${{ steps.slim_tag_list.outputs.list }}
     steps:
-    - uses: actions/checkout@v6
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
     - id: slim_tags
       uses: ./.github/actions/product
